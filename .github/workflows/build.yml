@@ -21,8 +21,7 @@ jobs:
                   pip install conan
             - name: Setup Conan
               run: |
-                  conan profile new default --detect
-                  conan profile update settings.compiler.libcxx=libstdc++11 default
+                  conan profile detect
                   if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
                       sudo apt-get update
                       sudo apt-get install gcc g++ -y
