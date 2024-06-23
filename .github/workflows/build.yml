@@ -11,6 +11,25 @@ jobs:
                 os: [ubuntu-latest, windows-latest]
         steps:
             - uses: actions/checkout@v2
+            - name: Setup Python
+              uses: actions/setup-python@v2
+              with:
+                  python-version: '3.x'
+            - name: Install Conan
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install conan
+            - name: Setup Conan
+              run: |
+                  conan profile new default --detect
+                  conan profile update settings.compiler.libcxx=libstdc++11 default
+                  if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+                      sudo apt-get update
+                      sudo apt-get install gcc g++ -y
+                  elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+                      choco install mingw
+                      echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
+                  fi
             - name: Create Build Directory
               run: mkdir -p build
             - name: Build Project
