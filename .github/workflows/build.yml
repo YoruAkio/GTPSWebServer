@@ -1,0 +1,20 @@
+name: Build Executable
+
+on:
+    push:
+
+jobs:
+    build:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+        steps:
+            - uses: actions/checkout@v2
+            - name: Create Build Directory
+              run: mkdir -p build
+            - name: Build Project
+              run: |
+                  cd build
+                  cmake -DCMAKE_BUILD_TYPE=Debug ..
+                  cmake --build .
