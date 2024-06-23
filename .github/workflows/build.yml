@@ -29,6 +29,7 @@ jobs:
                       choco install mingw
                       echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
                   fi
+              shell: bash
             - name: Create Build Directory
               run: mkdir -p build
             - name: Build Project
