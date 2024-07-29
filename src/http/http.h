@@ -12,7 +12,7 @@ public:
     HTTPServer() = default;
     ~HTTPServer();
 
-    bool listen(const std::string& ip, uint16_t port);
+    bool listen(const std::string& ip);
     void stop();
     void thread();
 
@@ -23,7 +23,7 @@ public:
     }
 
 private:
-    std::unique_ptr<httplib::SSLServer> m_server{};
+    std::unique_ptr<httplib::SSLServer> m_servers{};
     std::unique_ptr<std::thread> m_thread{};
 };
 }  // namespace Ventura

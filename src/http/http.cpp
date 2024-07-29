@@ -10,12 +10,12 @@
 #include "httplib.h"
 
 namespace Ventura {
-    bool HTTPServer::listen(const std::string& ip, uint16_t port) {
-        m_server = std::make_unique<httplib::SSLServer>("ssl/server.crt", "ssl/server.key");
+    bool HTTPServer::listen(const std::string& ip) {
+        m_servers = std::make_unique<httplib::SSLServer>("ssl/server.crt", "ssl/server.key");
 
-        spdlog::info("HTTPServer Initialized, listening on {}:{}", ip, port);
+        spdlog::info("HTTPServer Initialized, listening on port 443");
 
-        m_server->bind_to_port(ip.c_str(), port);
+        m_servers->bind_to_port(ip.c_str(), 443);
         m_thread = std::make_unique<std::thread>(&HTTPServer::thread, this);
         return true;
     }
@@ -27,22 +27,18 @@ namespace Ventura {
         }
     }
     void HTTPServer::thread() {
-        m_server->Get("/", [](const httplib::Request &req, httplib::Response &res) {
+        m_servers->Get("/", [](const httplib::Request &req, httplib::Response &res) {
             res.set_content("Hello World!", "text/plain");
         });
 
-        m_server->Get("/config", [](const httplib::Request &req, httplib::Response &res) {
-            res.set_content(Config::toJson().dump(), "application/json");
-        });
-
-        m_server->listen_after_bind();
+        m_servers->listen_after_bind();
         while (true);
     }
 
     void HTTPServer::stop() {
-        if (m_server) {
-            m_server->stop();
-            // m_server.release();
+        if (m_servers) {
+            m_servers->stop();
+            // m_servers.release();
         }
     }
 }  // namespace Ventura
