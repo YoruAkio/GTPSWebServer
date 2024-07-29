@@ -1,4 +1,4 @@
-project(GTWebServer LANGUAGES CXX)
+project(GTPSWebServer LANGUAGES CXX)
 
 file(GLOB INCLUDE_FILES
     *.h
@@ -6,12 +6,14 @@ file(GLOB INCLUDE_FILES
     **/**/*.h
     **/**/**/*.h
     **/**/**/**/*.h)
+
 file(GLOB SOURCE_FILES
     *.cpp
     **/*.cpp
     **/**/*.cpp
     **/**/**/*.cpp
     **/**/**/**/*.cpp)
+
 add_executable(${PROJECT_NAME}
     ${INCLUDE_FILES}
     ${SOURCE_FILES}
@@ -30,14 +32,14 @@ else ()
     include(${CMAKE_CURRENT_SOURCE_DIR}/conan.cmake)
     conan_cmake_configure(REQUIRES
             fmt/10.2.1
+            spdlog/1.14.1
             openssl/3.2.2
-            libcurl/8.8.0
         GENERATORS CMakeDeps CMakeToolchain
         IMPORTS "bin, *.dll -> ./bin"
         OPTIONS
             fmt/*:shared=True
-            openssl/*:shared=True
-            libcurl/*:shared=True)
+            spdlog/*:shared=True
+            openssl/*:shared=True)
 
     conan_cmake_autodetect(settings)
     conan_cmake_install(PATH_OR_REFERENCE .
@@ -57,21 +59,29 @@ else ()
     message(FATAL_ERROR "Could not find fmt")
 endif ()
 
+find_package(spdlog REQUIRED)
+if (spdlog_FOUND)
+    message(STATUS "Found spdlog: ${spdlog_VERSION}, at ${spdlog_INCLUDE_DIRS}, ${spdlog_LIBRARIES}")
+    target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${fmt_INCLUDE_DIRS})
+else ()
+    message(FATAL_ERROR "Could not find spdlog")
+endif ()
+
 find_package(OpenSSL REQUIRED)
-if (OPENSSL_FOUND)
-    message(STATUS "Found OpenSSL: ${OPENSSL_VERSION}")
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${OPENSSL_LIBRARIES})
-    target_include_directories(${PROJECT_NAME} PUBLIC ${OPENSSL_INCLUDE_DIR})
+if (OpenSSL_FOUND)
+    message(STATUS "Found OpenSSL: ${OpenSSL_VERSION}, at ${OpenSSL_INCLUDE_DIRS}, ${OpenSSL_LIBRARIES}")
+    target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+    target_include_directories(${PROJECT_NAME} PUBLIC ${OpenSSL_INCLUDE_DIRS})
 else ()
     message(FATAL_ERROR "Could not find OpenSSL")
 endif ()
 
-# target_link_libraries(${PROJECT_NAME} fmt::fmt)
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
     C_STANDARD 11
-    CXX_STANDARD 23
+    CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../bin
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -80,7 +90,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     CPPHTTPLIB_OPENSSL_SUPPORT
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC 
+target_include_directories(${PROJECT_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor
     ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/httplib
 )
