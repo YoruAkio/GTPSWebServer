@@ -1,15 +1,31 @@
-#include <iostream>
-#include <string>
-#include <future>
+#include <spdlog/spdlog.h>
 
-#include <config.h>
-#include <httplib.h>
-#include <server/http.h>
-#include <fmt/core.h>
+#include <fstream>
+
+#include "http/http.h"
+#include "httplib.h"
+#include "nlohmann/json.hpp"
+#include "config.h"
+#include "http/http.h"
+
+using json = nlohmann::json;
+using namespace Ventura;
 
 int main() {
-    fmt::print("Starting WebServer on {}:{}.\n", config::http::address, config::http::port);
-    GTWebServer::HTTPServer server(config::http::address, config::http::port);
+    spdlog::info("Initializing WebServer");
+
+    if (!Config::loadConfig()) {
+        spdlog::error("Failed to load config");
+        return 1;
+    } else {
+        spdlog::info("HTTPServer config loaded");
+    }
+
+    HTTPServer& m_server{ HTTPServer::Get() };
+    if (!m_server.listen(Config::ip, Config::port)) {
+        spdlog::error("Failed to listen on {}:{}", Config::ip, Config::port);
+        return 1;
+    }
+    
     return 0;
 }
-
