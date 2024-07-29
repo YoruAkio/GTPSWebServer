@@ -14,6 +14,14 @@ using namespace Ventura;
 int main() {
     spdlog::info("Initializing WebServer");
 
+    if (!std::filesystem::exists("ssl/server.crt") || !std::filesystem::exists("ssl/server.key")) {
+        spdlog::error("Failed to find ssl/server.crt or ssl/server.key");
+        return 1;
+    } else if (!std::filesystem::exists("config.json")) {
+        spdlog::error("Failed to find config.json");
+        return 1;
+    }
+
     if (!Config::loadConfig()) {
         spdlog::error("Failed to load config");
         return 1;
@@ -21,9 +29,10 @@ int main() {
         spdlog::info("HTTPServer config loaded");
     }
 
-    HTTPServer& m_server{ HTTPServer::Get() };
-    if (!m_server.listen(Config::ip, Config::port)) {
-        spdlog::error("Failed to listen on {}:{}", Config::ip, Config::port);
+    HTTPServer& m_servers{ HTTPServer::Get() };
+    if (!m_servers.listen(Config::ip)) {
+        spdlog::error("Failed to initialize HTTPServer");
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
     }
     
