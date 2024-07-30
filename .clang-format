@@ -14,7 +14,7 @@ SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
-ColumnLimit: 100
+ColumnLimit: 300
 BinPackParameters: true
 BinPackArguments: true
 BraceWrapping:
