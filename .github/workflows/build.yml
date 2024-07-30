@@ -25,9 +25,6 @@ jobs:
                   if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
                       sudo apt-get update
                       sudo apt-get install gcc g++ -y
-                  elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-                      choco install mingw
-                      echo "C:\ProgramData\chocolatey\bin" >> $GITHUB_PATH
                   fi
               shell: bash
             - name: Create Build Directory
@@ -35,5 +32,11 @@ jobs:
             - name: Build Project
               run: |
                   cd build
-                  cmake -DCMAKE_BUILD_TYPE=Debug ..
-                  cmake --build .
+                  if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+                      cmake -DCMAKE_BUILD_TYPE=Debug ..
+                      cmake --build .
+                  elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+                      cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Debug ..
+                      cmake --build . --config Debug
+                  fi
+              shell: bash
