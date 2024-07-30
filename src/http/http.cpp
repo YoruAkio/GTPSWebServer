@@ -31,6 +31,31 @@ namespace Ventura {
             res.set_content("Hello World!", "text/plain");
         });
 
+         m_servers->Post("/growtopia/server_data.php", [&](const httplib::Request& req, httplib::Response& res) {
+            if (req.params.empty() || req.get_header_value("User-Agent").find("UbiServices_SDK") == std::string::npos) {
+                res.status = 403;
+                return;
+            }
+            std::string meta = fmt::format("Ventura_{}", std::rand() % 9000 + 1000);
+            std::string content = fmt::format(
+                "server|{}\n"
+                "port|{}\n"
+                "type|1\n"
+                "# maint|Server is currently down for maintenance. We will be back soon!\n"
+                "loginurl|{}\n"
+                "meta|{}\n",
+                "RTENDMARKERBS1001",
+                Config::ip, Config::port, Config::loginurl, meta
+            );
+
+            res.set_content(std::move(content), "text/html");
+            return;
+        });
+        
+        m_servers->set_logger([](const httplib::Request &req, const httplib::Response &res) {
+            spdlog::info("{} {} {}", req.method, req.path, res.status);
+        });
+
         m_servers->listen_after_bind();
         while (true);
     }
