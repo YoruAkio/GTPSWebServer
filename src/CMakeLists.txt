@@ -34,12 +34,14 @@ else ()
             fmt/10.2.1
             spdlog/1.14.1
             openssl/3.2.2
+            sqlite3/3.46.0
         GENERATORS CMakeDeps CMakeToolchain
         IMPORTS "bin, *.dll -> ./bin"
         OPTIONS
             fmt/*:shared=True
             spdlog/*:shared=True
-            openssl/*:shared=True)
+            openssl/*:shared=True
+            sqlite3/*:shared=True)
 
     conan_cmake_autodetect(settings)
     conan_cmake_install(PATH_OR_REFERENCE .
@@ -75,6 +77,15 @@ if (OpenSSL_FOUND)
     target_include_directories(${PROJECT_NAME} PUBLIC ${OpenSSL_INCLUDE_DIRS})
 else ()
     message(FATAL_ERROR "Could not find OpenSSL")
+endif ()
+
+find_package(SQLite3 REQUIRED)
+if (SQLite3_FOUND)
+    message(STATUS "Found SQLite3: ${SQLite3_VERSION}, at ${SQLite3_INCLUDE_DIRS}, ${SQLite3_LIBRARIES}")
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${SQLite3_LIBRARIES})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${SQLite3_INCLUDE_DIRS})
+else ()
+    message(FATAL_ERROR "Could not find SQLite3")
 endif ()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
