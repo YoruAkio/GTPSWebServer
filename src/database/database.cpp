@@ -15,7 +15,7 @@ bool Database::open_db(const std::string& path) {
 
     char* zErrMsg = 0;
     const char* sql = "CREATE TABLE IF NOT EXISTS ip_blacklist (ip TEXT PRIMARY KEY NOT NULL);"
-                      "CREATE TABLE IF NOT EXISTS rate_limiter (ip TEXT PRIMARY KEY NOT NULL, count INTEGER NOT NULL, last_access INTEGER NOT NULL);";
+                      "CREATE TABLE IF NOT EXISTS rate_limiter (ip TEXT PRIMARY KEY NOT NULL, time_added INTEGER NOT NULL, cooldown_end INTEGER NOT NULL);";
     rc = sqlite3_exec(m_db.get(), sql, nullptr, 0, &zErrMsg);
     if (rc != SQLITE_OK) {
         spdlog::error("SQL error: {}", zErrMsg);
