@@ -16,9 +16,11 @@ int main() {
 
     if (!std::filesystem::exists("ssl/server.crt") || !std::filesystem::exists("ssl/server.key")) {
         spdlog::error("Failed to find ssl/server.crt or ssl/server.key");
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
     } else if (!std::filesystem::exists("config.json")) {
         spdlog::error("Failed to find config.json");
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
     }
 
@@ -27,7 +29,15 @@ int main() {
         return 1;
     } else {
         spdlog::info("HTTPServer config loaded");
+        spdlog::info(
+            "Config loaded: \n"
+            "ip: {}\n"
+            "port: {}\n"
+            "loginurl: {}\n",
+            Config::ip, Config::port, Config::loginurl
+        );
     }
+
 
     HTTPServer& m_servers{ HTTPServer::Get() };
     if (!m_servers.listen(Config::ip)) {
