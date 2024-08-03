@@ -47,6 +47,16 @@ int main() {
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
     }
+    m_db.loop_db();
+
+    // testing
+
+    int time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    int cooldown_end = time_now + 60;
+    spdlog::info("time_now: {}, cooldown_end: {}", time_now, cooldown_end);
+    m_db.insert_rate_limiter("1.2.1.2", time_now, cooldown_end);
+    m_db.remove_rate_limiter("1.2.1.2");
+    m_db.print_all_table_value(Database::eTable::RATE_LIMITER);
 
     spdlog::info("Initializing HTTPServer...");
     HTTPServer& m_servers{ HTTPServer::Get() };

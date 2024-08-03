@@ -7,6 +7,7 @@
 #include <cstring>
 #include <thread>
 
+#include "../limiter/limiter.h"
 #include "config.h"
 #include "httplib.h"
 
@@ -29,6 +30,12 @@ HTTPServer::~HTTPServer() {
 }
 
 void HTTPServer::thread() {
+    Limiter& m_limiter{ Limiter::Get() };
+
+    m_servers->Get(".*", [&](const httplib::Request& req, httplib::Response& res) {
+        m_limiter.ListenRequest(req, res);
+    });
+
     m_servers->Get("/", [](const httplib::Request &req, httplib::Response &res) { res.set_content("Hello World!", "text/plain"); });
 
     m_servers->Get("/config", [](const httplib::Request &req, httplib::Response &res) { res.set_content(Config::toJson().dump(4), "application/json"); });
