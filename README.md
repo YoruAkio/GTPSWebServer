@@ -41,7 +41,7 @@ Building the project:
     ```bash
     mkdir build
     cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Debug
+    cmake ..
     cmake --build .
     ```
 
