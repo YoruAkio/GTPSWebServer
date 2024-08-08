@@ -2,12 +2,11 @@
 
 #include <fstream>
 
+#include "config.h"
+#include "database/database.h"
 #include "http/http.h"
 #include "httplib.h"
 #include "nlohmann/json.hpp"
-#include "config.h"
-#include "http/http.h"
-#include "database/database.h"
 
 using json = nlohmann::json;
 using namespace Ventura;
@@ -36,18 +35,16 @@ int main() {
             "ip: {}\n"
             "port: {}\n"
             "loginurl: {}\n",
-            Config::ip, Config::port, Config::loginurl
-        );
+            Config::ip, Config::port, Config::loginurl);
     }
 
     spdlog::info("Initializing Database...");
-    Database& m_db( Database::Get() );
+    Database& m_db(Database::Get());
     if (!m_db.open_db("database.db")) {
         spdlog::error("Failed to initialize Database");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
     }
-    m_db.loop_db();
 
     // testing
 
@@ -59,12 +56,12 @@ int main() {
     m_db.print_all_table_value(Database::eTable::RATE_LIMITER);
 
     spdlog::info("Initializing HTTPServer...");
-    HTTPServer& m_servers{ HTTPServer::Get() };
+    HTTPServer& m_servers{HTTPServer::Get()};
     if (!m_servers.listen(Config::ip)) {
         spdlog::error("Failed to initialize HTTPServer");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
     }
-    
+
     return 0;
 }

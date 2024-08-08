@@ -50,6 +50,6 @@ public:
 
 private:
     std::unique_ptr<sqlite3, decltype(&sqlite3_close)> m_db{nullptr, sqlite3_close};
-    // std::unique_ptr<std::thread> m_thread{};
+    std::unique_ptr<std::thread> m_thread{};
 };
 }  // namespace Ventura

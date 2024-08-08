@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 
 #include <iostream>
+#include <thread>
 
 #include "../limiter/limiter.h"
 #include "sqlite3.h"
@@ -27,6 +28,8 @@ bool Database::open_db(const std::string& path) {
         sqlite3_free(zErrMsg);
         return false;
     }
+
+    m_thread = std::make_unique<std::thread>(&Database::loop_db, this);
 
     return true;
 }
@@ -266,7 +269,12 @@ bool Database::remove_blacklist(const std::string& ip) {
     return 1;
 }
 
-Database::~Database() { this->close(); }
+Database::~Database() {
+    this->close();
+    if (m_thread && m_thread->joinable()) {
+        m_thread->join();
+    }
+}
 
 void Database::close() {
     if (m_db) {
