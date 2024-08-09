@@ -18,10 +18,6 @@ int main() {
         spdlog::error("Failed to find ssl/server.crt or ssl/server.key");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
-    } else if (!std::filesystem::exists("config.json")) {
-        spdlog::error("Failed to find config.json");
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        return 1;
     }
 
     spdlog::info("Loading WebServer config...");
