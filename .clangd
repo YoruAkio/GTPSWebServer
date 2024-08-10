@@ -1,16 +1,16 @@
 CompileFlags:
-  Add:
-    - -I/vendor/httplib
-    - -I/vendor
+    Add:
+        - -I/vendor/httplib
+        - -I/vendor
 
 Diagnostics:
-  Suppress:
-    - '*'
+    Suppress:
+        - '*'
 
 InlayHints:
-  Enabled: No
-  BlockEnd: No
-  Designators: Yes
-  ParameterNames: Yes
-  DeducedTypes: Yes
-  TypeNameLimit: 24
+    Enabled: No
+    BlockEnd: No
+    Designators: Yes
+    ParameterNames: Yes
+    DeducedTypes: Yes
+    TypeNameLimit: 24
