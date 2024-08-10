@@ -22,9 +22,9 @@ inline bool makeConfig() {
     j["port"] = 17091;
     j["loginurl"] = "gtbackend-login.vercel.app";
     j["rateLimit"] = 50;
-    j["rateLimitTime"] = 60 * 5; // seconds
+    j["rateLimitTime"] = 60 * 5;  // seconds
     // array of trusted region
-    j["trustedRegion"] = { "ID", "SG", "MY" }; // only accept request from this region only
+    j["trustedRegion"] = {"ID", "SG", "MY"};  // only accept request from this region only
 
     try {
         std::ofstream file("config.json");
@@ -86,7 +86,6 @@ inline void printConfig() {
     spdlog::info("  rateLimit: {}", rateLimit);
     spdlog::info("  rateLimitTime: {}", rateLimitTime);
     spdlog::info("  trustedRegion: {}", fmt::join(trustedRegion, ", "));
-
 }
 }  // namespace Config
 }  // namespace Ventura
