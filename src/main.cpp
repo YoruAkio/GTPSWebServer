@@ -1,10 +1,11 @@
 #include <spdlog/spdlog.h>
 
-#include <fstream>
+#include <filesystem>
 
 #include "config.h"
 #include "database/database.h"
 #include "http/http.h"
+#include "limiter/limiter.h"
 #include "httplib.h"
 #include "nlohmann/json.hpp"
 
@@ -18,6 +19,7 @@ int main() {
         spdlog::error("Failed to find ssl/server.crt or ssl/server.key");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
+        
     }
 
     spdlog::info("Loading WebServer config...");
@@ -35,12 +37,14 @@ int main() {
         spdlog::error("Failed to initialize Database");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
+    } else if (!Limiter::Get().LoadLimiterData()) {
+        spdlog::error("Failed to load Limiter Data");
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        return 1;
     }
 
-    // testing
-
     int time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    int cooldown_end = time_now + 60;
+    int cooldown_end = time_now + 300;
     spdlog::info("time_now: {}, cooldown_end: {}", time_now, cooldown_end);
     m_db.insert_rate_limiter("1.2.1.2", time_now, cooldown_end);
     m_db.print_all_table_value(Database::eTable::RATE_LIMITER);
