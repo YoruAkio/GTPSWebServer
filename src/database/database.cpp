@@ -29,36 +29,38 @@ bool Database::open_db(const std::string& path) {
         return false;
     }
 
-    m_thread = std::make_unique<std::thread>(&Database::loop_db, this);
-
-    return true;
-}
-
-bool Database::loop_db() {
-    while (true) {
-        std::string sql = "SELECT * FROM rate_limiter;";
-        sqlite3_stmt* stmt;
-        int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK) {
-            spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
-            return false;
-        }
-
-        while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-            std::string ip = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-            int time_added = sqlite3_column_int(stmt, 1);
-            int cooldown_end = sqlite3_column_int(stmt, 2);
-
-            auto now = std::chrono::system_clock::now();
-            auto time_diff = std::chrono::duration_cast<std::chrono::seconds>(now - std::chrono::system_clock::from_time_t(time_added)).count();
-
-            if (time_diff > cooldown_end) {
-                this->remove_rate_limiter(ip);
-
-                spdlog::info("Removed rate limiter for IP: {}", ip);
+    m_thread = std::make_unique<std::thread>([this]() {
+        while (true) {
+            std::string sql = "SELECT * FROM rate_limiter;";
+            sqlite3_stmt* stmt;
+            int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
+            if (rc != SQLITE_OK) {
+                spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+                std::this_thread::sleep_for(std::chrono::seconds(10));
+                continue;
             }
+            int time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            spdlog::info("Checking rate limiter table...");
+            spdlog::info("Time Now: {}", time_now);
+
+            while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+                std::string ip = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+                int time_added = sqlite3_column_int(stmt, 1);
+                int cooldown_end = sqlite3_column_int(stmt, 2);
+
+                spdlog::info("IP: {}, Time Added: {}, Cooldown End: {}", ip, time_added, cooldown_end);
+
+                if (time_now > cooldown_end) {
+                    this->remove_rate_limiter(ip);
+
+                    spdlog::info("Removed rate limiter for IP: {}", ip);
+                }
+            }
+
+            sqlite3_finalize(stmt);
+            std::this_thread::sleep_for(std::chrono::seconds(10));
         }
-    }
+    });
 
     return true;
 }

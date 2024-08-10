@@ -14,7 +14,8 @@ public:
     ~Limiter();
 
     // TODO: Base Limiter
-    bool ListenRequest(const httplib::Request& req, httplib::Response& res);
+    void ListenRequest(const httplib::Request& req, httplib::Response& res);
+    bool LoadLimiterData();
     void Stop();
 
 public:
