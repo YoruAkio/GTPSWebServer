@@ -26,12 +26,7 @@ int main() {
         return 1;
     } else {
         spdlog::info("WebServer config loaded");
-        spdlog::info(
-            "Config loaded: \n"
-            "ip: {}\n"
-            "port: {}\n"
-            "loginurl: {}\n",
-            Config::ip, Config::port, Config::loginurl);
+        Config::printConfig();
     }
 
     spdlog::info("Initializing Database...");
@@ -48,7 +43,6 @@ int main() {
     int cooldown_end = time_now + 60;
     spdlog::info("time_now: {}, cooldown_end: {}", time_now, cooldown_end);
     m_db.insert_rate_limiter("1.2.1.2", time_now, cooldown_end);
-    m_db.remove_rate_limiter("1.2.1.2");
     m_db.print_all_table_value(Database::eTable::RATE_LIMITER);
 
     spdlog::info("Initializing HTTPServer...");

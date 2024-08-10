@@ -25,6 +25,7 @@ public:
 
 private:
     std::unique_ptr<std::thread> m_thread{};
+    std::unordered_map<std::string, std::pair<int, int>> m_request_count{};
     std::unordered_map<std::string, std::pair<int, int>> m_request_data{};
 
     int reqCount = 0;
