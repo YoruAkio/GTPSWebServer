@@ -29,10 +29,6 @@ if (CONAN_EXPORTED)
     include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 else ()
-    message(STATUS "Conan info: ${settings}")
-    message(STATUS "Conan info: ${settings}")
-    message(STATUS "Conan info: ${settings}")
-    message(STATUS "Conan info: ${settings}")
     include(${CMAKE_CURRENT_SOURCE_DIR}/conan.cmake)
     conan_cmake_configure(REQUIRES
             fmt/10.2.1
@@ -55,6 +51,7 @@ endif ()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}")
 set(DCMAKE_BUILD_TYPE "Debug")
+set(DEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../bin")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}" ${CMAKE_MODULE_PATH})
 set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_BINARY_DIR}" ${CMAKE_PREFIX_PATH})
 
@@ -92,6 +89,26 @@ if (SQLite3_FOUND)
     target_include_directories(${PROJECT_NAME} PUBLIC ${SQLite3_INCLUDE_DIRS})
 else ()
     message(FATAL_ERROR "Could not find SQLite3")
+endif ()
+
+get_filename_component(fmt_INCLUDE_DIRS "${fmt_INCLUDE_DIRS}" DIRECTORY)
+get_filename_component(spdlog_INCLUDE_DIRS "${spdlog_INCLUDE_DIRS}" DIRECTORY)
+get_filename_component(OpenSSL_INCLUDE_DIRS "${OpenSSL_INCLUDE_DIRS}" DIRECTORY)
+get_filename_component(SQLite3_INCLUDE_DIRS "${SQLite3_INCLUDE_DIRS}" DIRECTORY)
+
+function(copy_dll_files src_dir dest_dir)
+    message(STATUS "Copying .dll files from ${src_dir} to ${dest_dir}")
+    file(GLOB DLL_FILES "${src_dir}/bin/*.dll")
+    foreach(DLL_FILE ${DLL_FILES})
+        file(COPY ${DLL_FILE} DESTINATION ${dest_dir})
+    endforeach()
+endfunction()
+
+if (WIN32)
+    copy_dll_files(${fmt_INCLUDE_DIRS} ${DEST_DIR})
+    copy_dll_files(${spdlog_INCLUDE_DIRS} ${DEST_DIR})
+    copy_dll_files(${OpenSSL_INCLUDE_DIRS} ${DEST_DIR})
+    copy_dll_files(${SQLite3_INCLUDE_DIRS} ${DEST_DIR})
 endif ()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
