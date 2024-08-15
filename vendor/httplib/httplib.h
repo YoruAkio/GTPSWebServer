@@ -8,7 +8,7 @@
 #ifndef CPPHTTPLIB_HTTPLIB_H
 #define CPPHTTPLIB_HTTPLIB_H
 
-#define CPPHTTPLIB_VERSION "0.16.0"
+#define CPPHTTPLIB_VERSION "0.16.2"
 
 /*
  * Configuration
@@ -137,11 +137,11 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-// #ifdef _WIN64
-// using ssize_t = __int64;
-// #else
-// using ssize_t = long;
-// #endif
+#ifdef _WIN64
+using ssize_t = __int64;
+#else
+using ssize_t = long;
+#endif
 #endif // _MSC_VER
 
 #ifndef S_ISREG
@@ -269,7 +269,12 @@ using socket_t = int;
 #include <iostream>
 #include <sstream>
 
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
+#if defined(OPENSSL_IS_BORINGSSL)
+#if OPENSSL_VERSION_NUMBER < 0x1010107f
+#error Please use OpenSSL or a current version of BoringSSL
+#endif
+#define SSL_get1_peer_certificate SSL_get_peer_certificate
+#elif OPENSSL_VERSION_NUMBER < 0x30000000L
 #error Sorry, OpenSSL versions prior to 3.0.0 are not supported
 #endif
 
@@ -726,6 +731,10 @@ private:
         assert(true == static_cast<bool>(fn));
         fn();
       }
+
+#if defined(CPPHTTPLIB_OPENSSL_SUPPORT) && !defined(OPENSSL_IS_BORINGSSL)
+      OPENSSL_thread_stop();
+#endif
     }
 
     ThreadPool &pool_;
@@ -1526,6 +1535,7 @@ public:
                   const std::string &client_key_path);
 
   Client(Client &&) = default;
+  Client &operator=(Client &&) = default;
 
   ~Client();
 
@@ -1819,9 +1829,9 @@ public:
   bool is_valid() const override;
 
   SSL_CTX *ssl_context() const;
-  
-  void update_certs (X509 *cert, EVP_PKEY *private_key,
-            X509_STORE *client_ca_cert_store = nullptr);
+
+  void update_certs(X509 *cert, EVP_PKEY *private_key,
+                    X509_STORE *client_ca_cert_store = nullptr);
 
 private:
   bool process_and_close_socket(socket_t sock) override;
@@ -2819,24 +2829,51 @@ inline bool mmap::open(const char *path) {
     wpath += path[i];
   }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM |   \
+                            WINAPI_PARTITION_GAMES) &&                         \
+    (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
   hFile_ = ::CreateFile2(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ,
                          OPEN_EXISTING, NULL);
+#else
+  hFile_ = ::CreateFileW(wpath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL,
+                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+#endif
 
   if (hFile_ == INVALID_HANDLE_VALUE) { return false; }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM |   \
+                            WINAPI_PARTITION_GAMES)
   LARGE_INTEGER size{};
   if (!::GetFileSizeEx(hFile_, &size)) { return false; }
   size_ = static_cast<size_t>(size.QuadPart);
+#else
+  DWORD sizeHigh;
+  DWORD sizeLow;
+  sizeLow = ::GetFileSize(hFile_, &sizeHigh);
+  if (sizeLow == INVALID_FILE_SIZE) { return false; }
+  size_ = (static_cast<size_t>(sizeHigh) << (sizeof(DWORD) * 8)) | sizeLow;
+#endif
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM) && \
+    (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
   hMapping_ =
       ::CreateFileMappingFromApp(hFile_, NULL, PAGE_READONLY, size_, NULL);
+#else
+  hMapping_ = ::CreateFileMappingW(hFile_, NULL, PAGE_READONLY, size.HighPart,
+                                   size.LowPart, NULL);
+#endif
 
   if (hMapping_ == NULL) {
     close();
     return false;
   }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM) && \
+    (_WIN32_WINNT >= _WIN32_WINNT_WIN8)
   addr_ = ::MapViewOfFileFromApp(hMapping_, FILE_MAP_READ, 0, 0);
+#else
+  addr_ = ::MapViewOfFile(hMapping_, FILE_MAP_READ, 0, 0, 0);
+#endif
 #else
   fd_ = ::open(path, O_RDONLY);
   if (fd_ == -1) { return false; }
@@ -3219,7 +3256,13 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
     const auto addrlen = host.length();
     if (addrlen > sizeof(sockaddr_un::sun_path)) { return INVALID_SOCKET; }
 
+#ifdef SOCK_CLOEXEC
+    auto sock = socket(hints.ai_family, hints.ai_socktype | SOCK_CLOEXEC,
+                       hints.ai_protocol);
+#else
     auto sock = socket(hints.ai_family, hints.ai_socktype, hints.ai_protocol);
+#endif
+
     if (sock != INVALID_SOCKET) {
       sockaddr_un addr{};
       addr.sun_family = AF_UNIX;
@@ -3229,10 +3272,14 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
       hints.ai_addrlen = static_cast<socklen_t>(
           sizeof(addr) - sizeof(addr.sun_path) + addrlen);
 
+#ifndef SOCK_CLOEXEC
       fcntl(sock, F_SETFD, FD_CLOEXEC);
+#endif
+
       if (socket_options) { socket_options(sock); }
 
-      if (!bind_or_connect(sock, hints)) {
+      bool dummy;
+      if (!bind_or_connect(sock, hints, dummy)) {
         close_socket(sock);
         sock = INVALID_SOCKET;
       }
@@ -3274,11 +3321,18 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
       sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
     }
 #else
+
+#ifdef SOCK_CLOEXEC
+    auto sock =
+        socket(rp->ai_family, rp->ai_socktype | SOCK_CLOEXEC, rp->ai_protocol);
+#else
     auto sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+#endif
+
 #endif
     if (sock == INVALID_SOCKET) { continue; }
 
-#ifndef _WIN32
+#if !defined _WIN32 && !defined SOCK_CLOEXEC
     if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) {
       close_socket(sock);
       continue;
@@ -3310,12 +3364,15 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
     }
 
     // bind or connect
-    if (bind_or_connect(sock, *rp)) {
+    auto quit = false;
+    if (bind_or_connect(sock, *rp, quit)) {
       freeaddrinfo(result);
       return sock;
     }
 
     close_socket(sock);
+
+    if (quit) { break; }
   }
 
   freeaddrinfo(result);
@@ -3416,7 +3473,7 @@ inline socket_t create_client_socket(
     time_t write_timeout_usec, const std::string &intf, Error &error) {
   auto sock = create_socket(
       host, ip, port, address_family, 0, tcp_nodelay, std::move(socket_options),
-      [&](socket_t sock2, struct addrinfo &ai) -> bool {
+      [&](socket_t sock2, struct addrinfo &ai, bool &quit) -> bool {
         if (!intf.empty()) {
 #ifdef USE_IF2IP
           auto ip_from_if = if2ip(address_family, intf);
@@ -3440,7 +3497,10 @@ inline socket_t create_client_socket(
           }
           error = wait_until_socket_is_ready(sock2, connection_timeout_sec,
                                              connection_timeout_usec);
-          if (error != Error::Success) { return false; }
+          if (error != Error::Success) {
+            if (error == Error::ConnectionTimeout) { quit = true; }
+            return false;
+          }
         }
 
         set_nonblocking(sock2, false);
@@ -6417,7 +6477,7 @@ Server::create_server_socket(const std::string &host, int port,
   return detail::create_socket(
       host, std::string(), port, address_family_, socket_flags, tcp_nodelay_,
       std::move(socket_options),
-      [](socket_t sock, struct addrinfo &ai) -> bool {
+      [](socket_t sock, struct addrinfo &ai, bool & /*quit*/) -> bool {
         if (::bind(sock, ai.ai_addr, static_cast<socklen_t>(ai.ai_addrlen))) {
           return false;
         }
@@ -6473,7 +6533,16 @@ inline bool Server::listen_internal() {
 #ifndef _WIN32
       }
 #endif
+
+#if defined _WIN32
+      // sockets conneced via WASAccept inherit flags NO_HANDLE_INHERIT,
+      // OVERLAPPED
+      socket_t sock = WSAAccept(svr_sock_, nullptr, nullptr, nullptr, 0);
+#elif defined SOCK_CLOEXEC
+      socket_t sock = accept4(svr_sock_, nullptr, nullptr, SOCK_CLOEXEC);
+#else
       socket_t sock = accept(svr_sock_, nullptr, nullptr);
+#endif
 
       if (sock == INVALID_SOCKET) {
         if (errno == EMFILE) {
@@ -7271,7 +7340,7 @@ inline bool ClientImpl::redirect(Request &req, Response &res, Error &error) {
   if (location.empty()) { return false; }
 
   const static std::regex re(
-      R"((?:(https?):)?(?://(?:\[([\d:]+)\]|([^:/?#]+))(?::(\d+))?)?([^?#]*)(\?[^#]*)?(?:#.*)?)");
+      R"((?:(https?):)?(?://(?:\[([a-fA-F\d:]+)\]|([^:/?#]+))(?::(\d+))?)?([^?#]*)(\?[^#]*)?(?:#.*)?)");
 
   std::smatch m;
   if (!std::regex_match(location, m, re)) { return false; }
@@ -8157,7 +8226,8 @@ inline Result ClientImpl::Patch(const std::string &path,
 
 inline Result ClientImpl::Patch(const std::string &path,
                                 const std::string &body,
-                                const std::string &content_type, Progress progress) {
+                                const std::string &content_type,
+                                Progress progress) {
   return Patch(path, Headers(), body, content_type, progress);
 }
 
@@ -8508,13 +8578,29 @@ inline SSL *ssl_new(socket_t sock, SSL_CTX *ctx, std::mutex &ctx_mutex,
   return ssl;
 }
 
-inline void ssl_delete(std::mutex &ctx_mutex, SSL *ssl,
+inline void ssl_delete(std::mutex &ctx_mutex, SSL *ssl, socket_t sock,
                        bool shutdown_gracefully) {
   // sometimes we may want to skip this to try to avoid SIGPIPE if we know
   // the remote has closed the network connection
   // Note that it is not always possible to avoid SIGPIPE, this is merely a
   // best-efforts.
-  if (shutdown_gracefully) { SSL_shutdown(ssl); }
+  if (shutdown_gracefully) {
+#ifdef _WIN32
+    SSL_shutdown(ssl);
+#else
+    timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,
+               reinterpret_cast<const void *>(&tv), sizeof(tv));
+
+    auto ret = SSL_shutdown(ssl);
+    while (ret == 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      ret = SSL_shutdown(ssl);
+    }
+#endif
+  }
 
   std::lock_guard<std::mutex> guard(ctx_mutex);
   SSL_free(ssl);
@@ -8690,7 +8776,7 @@ inline SSLServer::SSLServer(const char *cert_path, const char *private_key_path,
                         SSL_OP_NO_COMPRESSION |
                             SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 
-    SSL_CTX_set_min_proto_version(ctx_, TLS1_1_VERSION);
+    SSL_CTX_set_min_proto_version(ctx_, TLS1_2_VERSION);
 
     if (private_key_password != nullptr && (private_key_password[0] != '\0')) {
       SSL_CTX_set_default_passwd_cb_userdata(
@@ -8722,7 +8808,7 @@ inline SSLServer::SSLServer(X509 *cert, EVP_PKEY *private_key,
                         SSL_OP_NO_COMPRESSION |
                             SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
 
-    SSL_CTX_set_min_proto_version(ctx_, TLS1_1_VERSION);
+    SSL_CTX_set_min_proto_version(ctx_, TLS1_2_VERSION);
 
     if (SSL_CTX_use_certificate(ctx_, cert) != 1 ||
         SSL_CTX_use_PrivateKey(ctx_, private_key) != 1) {
@@ -8756,17 +8842,17 @@ inline bool SSLServer::is_valid() const { return ctx_; }
 
 inline SSL_CTX *SSLServer::ssl_context() const { return ctx_; }
 
-inline void SSLServer::update_certs (X509 *cert, EVP_PKEY *private_key,
-            X509_STORE *client_ca_cert_store) {
+inline void SSLServer::update_certs(X509 *cert, EVP_PKEY *private_key,
+                                    X509_STORE *client_ca_cert_store) {
 
-    std::lock_guard<std::mutex> guard(ctx_mutex_);
+  std::lock_guard<std::mutex> guard(ctx_mutex_);
 
-    SSL_CTX_use_certificate (ctx_, cert);
-    SSL_CTX_use_PrivateKey  (ctx_, private_key);
+  SSL_CTX_use_certificate(ctx_, cert);
+  SSL_CTX_use_PrivateKey(ctx_, private_key);
 
-    if (client_ca_cert_store != nullptr) {
-        SSL_CTX_set_cert_store  (ctx_, client_ca_cert_store);
-    }
+  if (client_ca_cert_store != nullptr) {
+    SSL_CTX_set_cert_store(ctx_, client_ca_cert_store);
+  }
 }
 
 inline bool SSLServer::process_and_close_socket(socket_t sock) {
@@ -8793,7 +8879,7 @@ inline bool SSLServer::process_and_close_socket(socket_t sock) {
     // Shutdown gracefully if the result seemed successful, non-gracefully if
     // the connection appeared to be closed.
     const bool shutdown_gracefully = ret;
-    detail::ssl_delete(ctx_mutex_, ssl, shutdown_gracefully);
+    detail::ssl_delete(ctx_mutex_, ssl, sock, shutdown_gracefully);
   }
 
   detail::shutdown_socket(sock);
@@ -9047,11 +9133,14 @@ inline bool SSLClient::initialize_ssl(Socket &socket, Error &error) {
         return true;
       },
       [&](SSL *ssl2) {
+#if defined(OPENSSL_IS_BORINGSSL)
+        SSL_set_tlsext_host_name(ssl2, host_.c_str());
+#else
         // NOTE: Direct call instead of using the OpenSSL macro to suppress
         // -Wold-style-cast warning
-        // SSL_set_tlsext_host_name(ssl2, host_.c_str());
         SSL_ctrl(ssl2, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name,
                  static_cast<void *>(const_cast<char *>(host_.c_str())));
+#endif
         return true;
       });
 
@@ -9076,7 +9165,8 @@ inline void SSLClient::shutdown_ssl_impl(Socket &socket,
     return;
   }
   if (socket.ssl) {
-    detail::ssl_delete(ctx_mutex_, socket.ssl, shutdown_gracefully);
+    detail::ssl_delete(ctx_mutex_, socket.ssl, socket.sock,
+                       shutdown_gracefully);
     socket.ssl = nullptr;
   }
   assert(socket.ssl == nullptr);
@@ -9271,7 +9361,7 @@ inline Client::Client(const std::string &scheme_host_port,
     cli_ = detail::make_unique<ClientImpl>(scheme_host_port, 80,
                                            client_cert_path, client_key_path);
   }
-}
+} // namespace detail
 
 inline Client::Client(const std::string &host, int port)
     : cli_(detail::make_unique<ClientImpl>(host, port)) {}
@@ -9551,7 +9641,8 @@ inline Result Client::Patch(const std::string &path, const char *body,
 }
 inline Result Client::Patch(const std::string &path, const char *body,
                             size_t content_length,
-                            const std::string &content_type, Progress progress) {
+                            const std::string &content_type,
+                            Progress progress) {
   return cli_->Patch(path, body, content_length, content_type, progress);
 }
 inline Result Client::Patch(const std::string &path, const Headers &headers,
@@ -9561,15 +9652,18 @@ inline Result Client::Patch(const std::string &path, const Headers &headers,
 }
 inline Result Client::Patch(const std::string &path, const Headers &headers,
                             const char *body, size_t content_length,
-                            const std::string &content_type, Progress progress) {
-  return cli_->Patch(path, headers, body, content_length, content_type, progress);
+                            const std::string &content_type,
+                            Progress progress) {
+  return cli_->Patch(path, headers, body, content_length, content_type,
+                     progress);
 }
 inline Result Client::Patch(const std::string &path, const std::string &body,
                             const std::string &content_type) {
   return cli_->Patch(path, body, content_type);
 }
 inline Result Client::Patch(const std::string &path, const std::string &body,
-                            const std::string &content_type, Progress progress) {
+                            const std::string &content_type,
+                            Progress progress) {
   return cli_->Patch(path, body, content_type, progress);
 }
 inline Result Client::Patch(const std::string &path, const Headers &headers,
@@ -9579,7 +9673,8 @@ inline Result Client::Patch(const std::string &path, const Headers &headers,
 }
 inline Result Client::Patch(const std::string &path, const Headers &headers,
                             const std::string &body,
-                            const std::string &content_type, Progress progress) {
+                            const std::string &content_type,
+                            Progress progress) {
   return cli_->Patch(path, headers, body, content_type, progress);
 }
 inline Result Client::Patch(const std::string &path, size_t content_length,
@@ -9618,7 +9713,8 @@ inline Result Client::Delete(const std::string &path, const char *body,
 }
 inline Result Client::Delete(const std::string &path, const char *body,
                              size_t content_length,
-                             const std::string &content_type, Progress progress) {
+                             const std::string &content_type,
+                             Progress progress) {
   return cli_->Delete(path, body, content_length, content_type, progress);
 }
 inline Result Client::Delete(const std::string &path, const Headers &headers,
@@ -9628,15 +9724,18 @@ inline Result Client::Delete(const std::string &path, const Headers &headers,
 }
 inline Result Client::Delete(const std::string &path, const Headers &headers,
                              const char *body, size_t content_length,
-                             const std::string &content_type, Progress progress) {
-  return cli_->Delete(path, headers, body, content_length, content_type, progress);
+                             const std::string &content_type,
+                             Progress progress) {
+  return cli_->Delete(path, headers, body, content_length, content_type,
+                      progress);
 }
 inline Result Client::Delete(const std::string &path, const std::string &body,
                              const std::string &content_type) {
   return cli_->Delete(path, body, content_type);
 }
 inline Result Client::Delete(const std::string &path, const std::string &body,
-                             const std::string &content_type, Progress progress) {
+                             const std::string &content_type,
+                             Progress progress) {
   return cli_->Delete(path, body, content_type, progress);
 }
 inline Result Client::Delete(const std::string &path, const Headers &headers,
@@ -9646,7 +9745,8 @@ inline Result Client::Delete(const std::string &path, const Headers &headers,
 }
 inline Result Client::Delete(const std::string &path, const Headers &headers,
                              const std::string &body,
-                             const std::string &content_type, Progress progress) {
+                             const std::string &content_type,
+                             Progress progress) {
   return cli_->Delete(path, headers, body, content_type, progress);
 }
 inline Result Client::Options(const std::string &path) {

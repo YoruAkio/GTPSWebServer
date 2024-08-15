@@ -29,6 +29,10 @@ if (CONAN_EXPORTED)
     include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 else ()
+    message(STATUS "Conan info: ${settings}")
+    message(STATUS "Conan info: ${settings}")
+    message(STATUS "Conan info: ${settings}")
+    message(STATUS "Conan info: ${settings}")
     include(${CMAKE_CURRENT_SOURCE_DIR}/conan.cmake)
     conan_cmake_configure(REQUIRES
             fmt/10.2.1
@@ -46,8 +50,7 @@ else ()
     conan_cmake_autodetect(settings)
     conan_cmake_install(PATH_OR_REFERENCE .
         BUILD missing
-        REMOTE conancenter
-        SETTINGS ${settings})
+        REMOTE conancenter)
 endif ()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_BINARY_DIR}")
