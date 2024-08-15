@@ -2,5 +2,7 @@
     "ip": "127.0.0.1",
     "port": 17091,
     "loginurl": "gtlogin-backend.vercel.app",
-    "rateLimit": 100
+    "rateLimit": 100,
+    "rateLimitTime": 300,
+    "trustedRegion": ["ID", "SG", "MY"]
 }
