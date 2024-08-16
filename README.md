@@ -2,6 +2,9 @@
 
 HTTPServer for Growtopia Private Server to login and play GTPS
 
+## Note
+This repository is unmaintened and not suitable for production!
+
 ## TODO Lists
 
 - [x] Serve server_data.php path to connect to GTPS
