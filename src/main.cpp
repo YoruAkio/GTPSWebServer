@@ -1,13 +1,12 @@
-#include <spdlog/spdlog.h>
-
 #include <filesystem>
 
 #include "config.h"
 #include "database/database.h"
 #include "http/http.h"
-#include "limiter/limiter.h"
 #include "httplib.h"
+#include "limiter/limiter.h"
 #include "nlohmann/json.hpp"
+#include "spdlog/spdlog.h"
 
 using json = nlohmann::json;
 using namespace Ventura;
@@ -19,7 +18,6 @@ int main() {
         spdlog::error("Failed to find ssl/server.crt or ssl/server.key");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
-        
     }
 
     spdlog::info("Loading WebServer config...");

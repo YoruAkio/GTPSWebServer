@@ -1,7 +1,5 @@
 #include "limiter.h"
 
-#include <spdlog/spdlog.h>
-
 #include <memory>
 #include <string>
 #include <thread>
@@ -10,6 +8,7 @@
 #include "../config.h"
 #include "../database/database.h"
 #include "httplib.h"
+#include "spdlog/spdlog.h"
 #include "sqlite3.h"
 
 Ventura::Database& m_db(Ventura::Database::Get());

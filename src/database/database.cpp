@@ -1,11 +1,10 @@
 #include "database.h"
 
-#include <spdlog/spdlog.h>
-
 #include <iostream>
 #include <thread>
 
 #include "../limiter/limiter.h"
+#include "spdlog/spdlog.h"
 #include "sqlite3.h"
 
 namespace Ventura {

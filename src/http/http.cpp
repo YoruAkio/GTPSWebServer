@@ -2,7 +2,6 @@
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>
-#include <spdlog/spdlog.h>
 
 #include <cstring>
 #include <thread>
@@ -10,6 +9,7 @@
 #include "../limiter/limiter.h"
 #include "config.h"
 #include "httplib.h"
+#include "spdlog/spdlog.h"
 
 namespace Ventura {
 bool HTTPServer::listen(const std::string &ip) {
@@ -30,11 +30,9 @@ HTTPServer::~HTTPServer() {
 }
 
 void HTTPServer::thread() {
-    Limiter& m_limiter{ Limiter::Get() };
+    Limiter &m_limiter{Limiter::Get()};
 
-    m_servers->Get(".*", [&](const httplib::Request& req, httplib::Response& res) {
-        m_limiter.ListenRequest(req, res);
-    });
+    m_servers->Get(".*", [&](const httplib::Request &req, httplib::Response &res) { m_limiter.ListenRequest(req, res); });
 
     m_servers->Get("/", [](const httplib::Request &req, httplib::Response &res) { res.set_content("Hello World!", "text/plain"); });
 
