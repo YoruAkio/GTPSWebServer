@@ -27,9 +27,6 @@ jobs:
                       sudo apt-get install gcc g++ -y
                   fi
               shell: bash
-            - name: Setup MinGW (Windows)
-              if: matrix.os == 'windows-latest'
-              uses: brendanashworth/setup-mingw@v1
             - name: Create Build Directory
               run: mkdir -p build
             - name: Build Project
@@ -39,7 +36,7 @@ jobs:
                       cmake -DCMAKE_BUILD_TYPE=Debug ..
                       cmake --build .
                   elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-                      cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug ..
+                      cmake .. -DCMAKE_BUILD_TYPE=Debug 
                       cmake --build .
                   fi
               shell: bash
