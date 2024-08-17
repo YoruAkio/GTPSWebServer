@@ -10,8 +10,8 @@ This repository is unmaintened and not suitable for production!
 - [x] Serve server_data.php path to connect to GTPS
 - [x] Request checker to prevent request getting server data
 - [ ] Adding public folder `cache/` for caching
-- [ ] Implement rate limiting to prevent DDoS
-- [ ] Implement IP Blocking to end request if IP is blocked
+- [x] Implement rate limiting to prevent DDoS
+- [x] Implement IP Blocking to end request if IP is blocked
 - [ ] Geo Location checker to prevent request from other country
 - [ ] Better Logging System
 - [ ] Implementing reverse proxy to prevent DDoS
