@@ -107,20 +107,73 @@ jobs:
         cmake --build . --config Debug
       shell: bash
     
-    - name: Create SSL Directory
+    - name: Create SSL Directory and Files
       run: |
         mkdir -p bin/ssl
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          openssl req -x509 -newkey rsa:4096 -keyout bin/ssl/server.key -out bin/ssl/server.crt -days 365 -nodes -subj "/CN=localhost"
-        elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-          openssl req -x509 -newkey rsa:4096 -keyout bin/ssl/server.key -out bin/ssl/server.crt -days 365 -nodes -subj "/CN=localhost"
-        fi
+        cat > bin/ssl/server.crt << 'EOL'
+        -----BEGIN CERTIFICATE-----
+        MIIEMTCCAxmgAwIBAgIUBiHPF+Ggsymc8YpFicv5cnJMlj4wDQYJKoZIhvcNAQEL
+        BQAwgaYxCzAJBgNVBAYTAklEMRAwDgYDVQQIDAdKYWthcnRhMRAwDgYDVQQHDAdK
+        YWthcnRhMRQwEgYDVQQKDAtWZXJ0aW9uIEx0ZDEgMB4GA1UECwwXVmVydGlvbiBT
+        ZWN0b3IgR2FtZSBEZXYxGzAZBgNVBAMMEnd3dy5ncm93dG9waWExLmNvbTEeMBwG
+        CSqGSIb3DQEJARYPeW9ydWFraW9AZmJpLmFjMCAXDTI0MDcyOTE2MDQzNloYDzIw
+        NTExMjE0MTYwNDM2WjCBpjELMAkGA1UEBhMCSUQxEDAOBgNVBAgMB0pha2FydGEx
+        EDAOBgNVBAcMB0pha2FydGExFDASBgNVBAoMC1ZlcnRpb24gTHRkMSAwHgYDVQQL
+        DBdWZXJ0aW9uIFNlY3RvciBHYW1lIERldjEbMBkGA1UEAwwSd3d3Lmdyb3d0b3Bp
+        YTEuY29tMR4wHAYJKoZIhvcNAQkBFg95b3J1YWtpb0BmYmkuYWMwggEiMA0GCSqG
+        SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC0aPAePSUlIorLmSkal7NjsCACp6JgbHaS
+        5l9UWSFsdv9YB77ZNE/xOFQKJXgfT3wxDdXfXj359vDSbOJh6kWw4qxzmiY/A2gm
+        t5sdJBl+nEfCZMUckSNExi2tI8CIh96X1qetdg8ALKbIq098mJwmYzLN4E0cIf/n
+        CbCwSXTtz0bOX/eEKlHOZyVKgsrrUPm0Q5jT3eNJss9nN8Xk30nPs9fAPs2GO/G4
+        AKIWsqHdP5UumbW7DmTbQKa5NNux7u+fDy+yU4kqwWMD3Mhz3AfOSEuYtvS9/Mgz
+        AKg4J5j6Vjq+J/xR3xjhN6ztjbl1/4fgfhVxxJvnMw+D03Nhf21PAgMBAAGjUzBR
+        MB0GA1UdDgQWBBSzTMmvaR4u9UKkf0NpF5LKSvvqXDAfBgNVHSMEGDAWgBSzTMmv
+        aR4u9UKkf0NpF5LKSvvqXDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUA
+        A4IBAQCWrEZIKhNNjx0843ujsxXsRBA3qzG7FjhQ8+2gSt4TFnh5STIEbF34/DbF
+        22HBxrZy+jW0lXseJTOI/RH2qcDHpOMKoEC5I5SAiXd1wjOR6Yy7a/fvrxglbkcc
+        YCZig7gqax18U8HF/sk6apcIaEpKuMohZ1ZF4KiEJgm07RoCcGNjrg6Ch5ectFxB
+        6JR/8fRZ42s/pgP2IOsZ64XMY/Xcm5DWsEOGD/80NEiAhlWAN/JELv+johcUvXLa
+        7uAfZ88c42eDL1zkD0yCmx5tOXgoS7OxJTCyL1AVcFSLu1ioMsySJ0hiQ95os+kQ
+        s3UKdSJjmu0BR3S1tNiwgf1BYd/z
+        -----END CERTIFICATE-----
+        EOL
+
+        cat > bin/ssl/server.key << 'EOL'
+        -----BEGIN PRIVATE KEY-----
+        MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC0aPAePSUlIorL
+        mSkal7NjsCACp6JgbHaS5l9UWSFsdv9YB77ZNE/xOFQKJXgfT3wxDdXfXj359vDS
+        bOJh6kWw4qxzmiY/A2gmt5sdJBl+nEfCZMUckSNExi2tI8CIh96X1qetdg8ALKbI
+        q098mJwmYzLN4E0cIf/nCbCwSXTtz0bOX/eEKlHOZyVKgsrrUPm0Q5jT3eNJss9n
+        N8Xk30nPs9fAPs2GO/G4AKIWsqHdP5UumbW7DmTbQKa5NNux7u+fDy+yU4kqwWMD
+        3Mhz3AfOSEuYtvS9/MgzAKg4J5j6Vjq+J/xR3xjhN6ztjbl1/4fgfhVxxJvnMw+D
+        03Nhf21PAgMBAAECggEAGbDB1MSHSBj5o9GNKWTF3mHDxS0C8fEwF24n0BabLFtr
+        tCjyM/L/mU2YphM83lSOzlt2g8bjU3enRofL2v6l6vD0dsfSP3HoQG8v7v/ng4CU
+        tWltKkq+t3nzIi8vqSGUAJJIMWrY6wDwxS2j9Y2z2sGQiAGzaVisHMXj+86SEJUQ
+        PVUyhvovVEEXvgbyAsHfYTicqCUEf3hY35CNusgn2ykot9uLC0JODCOZoQV338Eb
+        M0Wr0Mi3SFJkwOQuSDTjcOZ9KnXVK3Kl+JFUD51cWPINy1R9g+tavtrL/OeYAJmQ
+        hMXG073PwwxYpiiwq7WjIfljb8eLlP9ZunCUnaYmAQKBgQD7b1ic1Th/TqnLYiFH
+        ZSVWWdOdGSs02o2iXa2ZzVnMhGO9PcpsW3NmL+z/dFhNz5DlohPw20Kc9Q8rmyLJ
+        idYza1mnwH94hyilSEIfo/4SFH+MK8vdESK+z5xNuEL1YhK61DvNVnaO7xMJmKPw
+        BIZnYSPDigUTm7EYKrvTpNbaAQKBgQC3r3jQEdPfdjklwhF/FqOeHIMbKH/jkYG/
+        Bw8p2Ng+uqQrUwhtbyjKxnps+czekvFbqw6JpuAzkJ4NA+c4Cr2h+FKnc1gPO3y4
+        +zjgxdfYAnAcjpUEp34VV6oBVFucJFadp0jXwDxf8+xUlz7v/JFBwSjErAuIqgJn
+        4DWCL/wnTwKBgHMoTC2IepfUL3A3QYaxjKg/++u321IZx0TWIuyOYNKK0COcaVm3
+        iOMEkEdvwgHhTzvdP8TQp3G7y3btVsF3n+NtB2MNh1RskvEgZyiWs4cUXFaWuIhH
+        kOJTtALkocZBZNKs4bbqIuLUHKQIhQ0pBWXT1813KVwRssqex+fnV4ABAoGAckqi
+        d4TAOkjLYi0Qye0CPX0sLpfSi3ycKIpx6u3cD5v+Tl7J3Z3O2e0JfAkqakswFoOm
+        9gt5cVxIm3yUQBCe0cs7Uqm4XzH6dvcJ+wHfPa62p24oVs8I6qqzQ0SEA/GwW0Qd
+        VPFuH54crL23EYgrsahIf6c1PgHaoVumr6y/zo0CgYAYIH/rjZwvB4X54x3U1+m3
+        wNXI4U0k3ebe2sHUaTcrIW20aMV0MS0nIqJEImPDaUzYQXWALyCdNjg7MnbrkzOe
+        AkmOh6Gg3bkykNGtchc0oVxl8rPqR02jDHPMP+Vp4uWFgiHoHjb4reConNFfyFPQ
+        zzkfV5CsiV/lRUdligDE6Q==
+        -----END PRIVATE KEY-----
+        EOL
       shell: bash
     
     - name: Copy Config Template
       run: |
         if [ ! -f bin/config.json ]; then
-          echo '{"ip":"127.0.0.1","port":17091,"loginurl":"gtbackend-login.vercel.app","rateLimit":50,"rateLimitTime":300,"trustedRegion":["ID","SG","MY"]}' > bin/config.json
+        echo '{"ip":"127.0.0.1","port":17091,"loginurl":"gtbackend-login.vercel.app","rateLimit":50,"rateLimitTime":300,"trustedRegion":["ID","SG","MY"]}' > bin/config.json
         fi
       shell: bash
     
