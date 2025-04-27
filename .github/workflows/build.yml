@@ -14,17 +14,17 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: 'recursive'
     
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
     
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.conan
@@ -52,15 +52,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc g++ cmake build-essential libssl-dev libsqlite3-dev libfmt-dev libcurl4-openssl-dev
       
+    - name: Create Build Directory
+      run: mkdir -p build
+      
     - name: Install Windows Dependencies
       if: matrix.os == 'windows-latest'
       run: |
+        cd build
         conan install .. --build=missing -s build_type=Debug
       shell: bash
-      working-directory: build
-    
-    - name: Create Build Directory
-      run: mkdir -p build
     
     - name: Configure CMake
       run: |
@@ -97,7 +97,7 @@ jobs:
     
     - name: Upload Linux Artifacts
       if: matrix.os == 'ubuntu-latest'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GTPSWebServer-Linux
         path: |
@@ -107,7 +107,7 @@ jobs:
     
     - name: Upload Windows Artifacts
       if: matrix.os == 'windows-latest'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GTPSWebServer-Windows
         path: |
