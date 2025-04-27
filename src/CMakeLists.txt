@@ -24,6 +24,7 @@ if(MSVC)
     target_compile_definitions(${PROJECT_NAME} PRIVATE 
         _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING
         _SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS
+        _CRT_SECURE_NO_WARNINGS  # Suppress localtime warnings
     )
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
