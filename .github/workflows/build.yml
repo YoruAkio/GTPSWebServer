@@ -177,25 +177,40 @@ jobs:
         fi
       shell: bash
     
-    - name: Upload Linux Artifacts
+    - name: Get short SHA
+      id: sha
+      run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      shell: bash
+    
+    - name: Create Linux Release Zip
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        mkdir -p releases
+        cd bin
+        zip -r ../releases/Releases-Linux-${{ steps.sha.outputs.short_sha }}.zip GTPSWebServer ssl config.json
+      shell: bash
+    
+    - name: Create Windows Release Zip
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir -p releases
+        cd bin
+        zip -r ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip GTPSWebServer.exe ssl config.json
+      shell: bash
+    
+    - name: Upload Linux Zip Artifact
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: GTPSWebServer-Linux
-        path: |
-          bin/GTPSWebServer
-          bin/ssl
-          bin/config.json
+        name: GTPSWebServer-Linux-Zip
+        path: releases/Releases-Linux-${{ steps.sha.outputs.short_sha }}.zip
     
-    - name: Upload Windows Artifacts
+    - name: Upload Windows Zip Artifact
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: GTPSWebServer-Windows
-        path: |
-          bin/Debug/GTPSWebServer.exe
-          bin/ssl
-          bin/config.json
+        name: GTPSWebServer-Windows-Zip
+        path: releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip
 
   release:
     needs: build
@@ -206,34 +221,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Get short SHA
-        id: sha
-        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-        
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: releases
       
       - name: Display structure of downloaded files
-        run: ls -R artifacts
+        run: ls -R releases
         shell: bash
       
-      - name: Create compressed release files
+      - name: Prepare release files
         run: |
-          mkdir -p releases
+          # Move zip files to root of releases directory
+          mv releases/GTPSWebServer-Linux-Zip/*.zip releases/
+          mv releases/GTPSWebServer-Windows-Zip/*.zip releases/
           
-          # Create Linux zip
-          cd artifacts/GTPSWebServer-Linux
-          zip -r ../../releases/Releases-Linux-${{ steps.sha.outputs.short_sha }}.zip .
-          cd ../..
+          # Remove artifact directories
+          rm -rf releases/GTPSWebServer-Linux-Zip
+          rm -rf releases/GTPSWebServer-Windows-Zip
           
-          # Create Windows zip
-          cd artifacts/GTPSWebServer-Windows
-          zip -r ../../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip .
-          cd ../..
-          
-          # List the created release files
+          # List the release files
           ls -la releases/
         shell: bash
       
