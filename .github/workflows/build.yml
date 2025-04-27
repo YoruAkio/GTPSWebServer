@@ -31,6 +31,7 @@ jobs:
           ~/Library/Caches/conan/
           ~/.cache/pip
           ~/AppData/Local/pip/Cache
+          ~\.conan\data
         key: ${{ matrix.os }}-conan-${{ hashFiles('**/conanfile.txt', '**/CMakeLists.txt') }}
         restore-keys: |
           ${{ matrix.os }}-conan-
@@ -73,21 +74,25 @@ jobs:
       run: mkdir -p build
       shell: bash
       
-    - name: Install Windows Dependencies
+    - name: Install Windows Dependencies with Conan
       if: matrix.os == 'windows-latest'
       run: |
         cd build
         conan install .. --build=missing -s build_type=Debug
       shell: bash
     
-    - name: Configure CMake
+    - name: Configure CMake (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         cd build
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
-        elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$(pwd)"
-        fi
+        cmake -DCMAKE_BUILD_TYPE=Debug ..
+      shell: bash
+    
+    - name: Configure CMake (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MODULE_PATH="$PWD" -DCMAKE_PREFIX_PATH="$PWD"
       shell: bash
     
     - name: Build Project
