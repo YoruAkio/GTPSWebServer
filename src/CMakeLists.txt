@@ -36,13 +36,13 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 # Custom handling for SQLite3 on different platforms
-if(WIN32 AND TARGET CONAN_PKG::libcurl)
-    # Use Conan targets if available (Windows)
+if(WIN32)
+    # Windows build using Conan packages
     target_link_libraries(${PROJECT_NAME} PRIVATE
         OpenSSL::SSL
         OpenSSL::Crypto
-        SQLite3::SQLite3
-        fmt
+        CONAN_PKG::sqlite3
+        CONAN_PKG::fmt
         CONAN_PKG::libcurl
     )
 elseif(UNIX)
