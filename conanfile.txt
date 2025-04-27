@@ -1,0 +1,16 @@
+[requires]
+openssl/1.1.1n
+libcurl/8.0.1
+sqlite3/3.40.0
+fmt/9.1.0
+
+[generators]
+cmake
+cmake_find_package
+cmake_paths
+
+[options]
+openssl:shared=True
+libcurl:shared=True
+sqlite3:shared=True
+fmt:shared=True

@@ -1,42 +1,116 @@
 name: Build Executable
 
 on:
-    push:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-    build:
-        runs-on: ${{ matrix.os }}
-        strategy:
-            matrix:
-                os: [ubuntu-latest, windows-latest]
-        steps:
-            - uses: actions/checkout@v2
-            - name: Setup Python
-              uses: actions/setup-python@v2
-              with:
-                  python-version: '3.x'
-            - name: Install Conan
-              run: |
-                  python -m pip install --upgrade pip
-                  pip install --upgrade conan
-            - name: Setup Conan
-              run: |
-                  conan profile detect
-                  if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-                      sudo apt-get update
-                      sudo apt-get install gcc g++ -y
-                  fi
-              shell: bash
-            - name: Create Build Directory
-              run: mkdir -p build
-            - name: Build Project
-              run: |
-                  cd build
-                  if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-                      cmake -DCMAKE_BUILD_TYPE=Debug ..
-                      cmake --build .
-                  elif [ "${{ matrix.os }}" == "windows-latest" ]; then
-                      cmake .. -DCMAKE_BUILD_TYPE=Debug 
-                      cmake --build .
-                  fi
-              shell: bash
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.conan
+          ~/Library/Caches/conan/
+          ~/.cache/pip
+          ~/AppData/Local/pip/Cache
+        key: ${{ matrix.os }}-conan-${{ hashFiles('**/conanfile.txt', '**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ matrix.os }}-conan-
+    
+    - name: Install Conan
+      run: |
+        python -m pip install --upgrade pip
+        pip install conan==1.59.0
+    
+    - name: Setup Conan
+      run: |
+        conan profile new default --detect
+        conan profile update settings.compiler.libcxx=libstdc++11 default || true
+      shell: bash
+    
+    - name: Install Linux Dependencies
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc g++ cmake build-essential libssl-dev libsqlite3-dev libfmt-dev libcurl4-openssl-dev
+      
+    - name: Install Windows Dependencies
+      if: matrix.os == 'windows-latest'
+      run: |
+        conan install .. --build=missing -s build_type=Debug
+      shell: bash
+      working-directory: build
+    
+    - name: Create Build Directory
+      run: mkdir -p build
+    
+    - name: Configure CMake
+      run: |
+        cd build
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+        elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$(pwd)"
+        fi
+      shell: bash
+    
+    - name: Build Project
+      run: |
+        cd build
+        cmake --build . --config Debug
+      shell: bash
+    
+    - name: Create SSL Directory
+      run: |
+        mkdir -p bin/ssl
+        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          openssl req -x509 -newkey rsa:4096 -keyout bin/ssl/server.key -out bin/ssl/server.crt -days 365 -nodes -subj "/CN=localhost"
+        elif [ "${{ matrix.os }}" == "windows-latest" ]; then
+          openssl req -x509 -newkey rsa:4096 -keyout bin/ssl/server.key -out bin/ssl/server.crt -days 365 -nodes -subj "/CN=localhost"
+        fi
+      shell: bash
+    
+    - name: Copy Config Template
+      run: |
+        if [ ! -f bin/config.json ]; then
+          echo '{"ip":"127.0.0.1","port":17091,"loginurl":"gtbackend-login.vercel.app","rateLimit":50,"rateLimitTime":300,"trustedRegion":["ID","SG","MY"]}' > bin/config.json
+        fi
+      shell: bash
+    
+    - name: Upload Linux Artifacts
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: GTPSWebServer-Linux
+        path: |
+          bin/GTPSWebServer
+          bin/ssl
+          bin/config.json
+    
+    - name: Upload Windows Artifacts
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v3
+      with:
+        name: GTPSWebServer-Windows
+        path: |
+          bin/Debug/GTPSWebServer.exe
+          bin/ssl
+          bin/config.json

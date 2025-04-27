@@ -7,6 +7,7 @@
 #include "limiter/limiter.h"
 #include "nlohmann/json.hpp"
 #include "utils/logger.h"
+#include "geo/geo.h"  // Include the geo header file
 
 using json = nlohmann::json;
 using namespace Ventura;
@@ -27,6 +28,21 @@ int main() {
     } else {
         Logger::info("WebServer config loaded");
         Config::printConfig();
+    }
+
+    Logger::info("Initializing Geolocation service...");
+    Geo& geo_service = Geo::Get();
+    if (!geo_service.initialize()) {
+        Logger::warn("Geolocation service initialization had issues but will continue");
+    } else {
+        Logger::info("Geolocation service initialized successfully");
+        
+        // Test IP geolocation with some example IPs
+        std::vector<std::string> test_ips = {"8.8.8.8", "103.10.10.10", "111.22.33.44"};
+        for (const auto& ip : test_ips) {
+            bool allowed = geo_service.isAllowed(ip);
+            Logger::debug("Test IP {} is{} allowed", ip, allowed ? "" : " not");
+        }
     }
 
     Logger::info("Initializing Database...");

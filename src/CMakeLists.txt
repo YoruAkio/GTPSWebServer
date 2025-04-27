@@ -30,6 +30,10 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(${PROJECT_NAME} PUBLIC pthread)
 endif()
 
+# Find curl package
+find_package(CURL REQUIRED)
+include_directories(${CURL_INCLUDE_DIRS})
+
 # Required compiler definition for OpenSSL support in httplib
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     CPPHTTPLIB_OPENSSL_SUPPORT
@@ -41,6 +45,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenSSL::Crypto
     SQLite3::SQLite3
     fmt
+    ${CURL_LIBRARIES} # Add curl library
 )
 
 # Set output directory

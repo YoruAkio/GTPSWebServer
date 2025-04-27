@@ -13,6 +13,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 # Find packages directly from the system
 find_package(OpenSSL REQUIRED)
 
+# Find curl library
+find_package(CURL REQUIRED)
+if(CURL_FOUND)
+    message(STATUS "Found CURL: ${CURL_LIBRARIES}")
+    include_directories(${CURL_INCLUDE_DIRS})
+endif()
+
 # Find SQLite3 (Ubuntu package doesn't provide SQLite3::SQLite3 target)
 find_path(SQLITE3_INCLUDE_DIR sqlite3.h)
 find_library(SQLITE3_LIBRARY sqlite3)
@@ -48,6 +55,7 @@ include_directories(
     ${OPENSSL_INCLUDE_DIR}
     ${SQLITE3_INCLUDE_DIR}
     ${FMT_INCLUDE_DIR}
+    ${CURL_INCLUDE_DIRS}
     vendor/
     vendor/httplib
 )

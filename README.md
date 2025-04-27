@@ -1,58 +1,65 @@
 # GTPSWebServer
 
-HTTPServer for Growtopia Private Server to login and play GTPS
+[![Build Executable](https://github.com/yourusername/GTPSWebServer/actions/workflows/build.yml/badge.svg)](https://github.com/yourusername/GTPSWebServer/actions/workflows/build.yml)
 
-## Note
-This repository is unmaintened and not suitable for production!
+A modern, secure GTPS web server with features including:
+- HTTP/HTTPS Support via cpp-httplib
+- Regional Geolocation Filtering
+- Advanced Rate Limiting
+- SQLite Database Integration
 
-## TODO Lists
+## Features
 
-- [x] Serve server_data.php path to connect to GTPS
-- [x] Request checker to prevent request getting server data
-- [ ] Adding public folder `cache/` for caching
-- [x] Implement rate limiting to prevent DDoS
-- [x] Implement IP Blocking to end request if IP is blocked
-- [ ] Geo Location checker to prevent request from other country
-- [ ] Better Logging System
-- [ ] Implementing reverse proxy to prevent DDoS
+### Geo Location Filtering
+- Filters requests based on the country of origin
+- Customizable trusted regions list in config.json
+- Multiple lookup services with fallback mechanisms
+- Memory caching for improved performance
 
-## Build
+### Rate Limiting
+- Protects against abuse and DDoS attacks
+- Configurable rate limits and cooldown periods
+- Persistent storage of rate limits in SQLite database
+- Detailed statistics and logging
 
-The following dependencies are required to build this project:
+## Building
 
-- [CMake](https://cmake.org/)
-- [Conan](https://conan.io/)
+### Requirements
+- C++17 compiler
+- CMake 3.16+
+- OpenSSL
+- SQLite3
+- libfmt
+- libcurl
 
-Building the project:
+### Linux
+```bash
+mkdir -p build && cd build
+cmake ..
+cmake --build .
+```
 
-1. CLone this repository:
+### Windows
+```bash
+mkdir build
+cd build
+conan install .. --build=missing
+cmake ..
+cmake --build .
+```
 
-    ```bash
-    git clone https://github.com/YoruAkio/GTPSWebServer.git
-    cd GTPSWebServer
-    ```
-
-2. Install Python 3.10 or higher (For Windows User: select 'Add Python to PATH' during installation)
-3. Install Conan:
-
-    ```bash
-    pip install conan
-    ```
-
-4. Follow this step to building the project:
-
-    ```bash
-    mkdir build
-    cd build
-    cmake ..
-    cmake --build .
-    ```
-
-## Notes
-
-- This project is still in development, so there are many bugs and issues.
-- This project is tested on Arch Linux Based OS, and Windows will be tested soon.
+## Configuration
+Edit `bin/config.json` to configure:
+```json
+{
+  "ip": "127.0.0.1",
+  "port": 17091,
+  "loginurl": "gtbackend-login.vercel.app",
+  "rateLimit": 50,
+  "rateLimitTime": 300,
+  "trustedRegion": ["ID", "SG", "MY"]
+}
+```
 
 ## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE) file for details.
