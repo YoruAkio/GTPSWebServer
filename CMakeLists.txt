@@ -66,19 +66,38 @@ endif()
 # Find SQLite3
 find_package(SQLite3 QUIET)
 if(NOT SQLite3_FOUND)
-    find_path(SQLITE3_INCLUDE_DIR sqlite3.h)
-    find_library(SQLITE3_LIBRARY sqlite3)
+    # Use pkg-config to find sqlite3 on Linux systems
+    if(UNIX AND NOT APPLE)
+        find_package(PkgConfig QUIET)
+        if(PKG_CONFIG_FOUND)
+            pkg_check_modules(SQLITE3 QUIET sqlite3)
+        endif()
+    endif()
     
-    if(SQLITE3_INCLUDE_DIR AND SQLITE3_LIBRARY)
-        message(STATUS "Found SQLite3: ${SQLITE3_LIBRARY}")
+    # Manual search as a fallback
+    if(NOT SQLITE3_FOUND)
+        find_path(SQLITE3_INCLUDE_DIR sqlite3.h)
+        find_library(SQLITE3_LIBRARY sqlite3)
+    endif()
+    
+    if(SQLITE3_INCLUDE_DIR AND (SQLITE3_LIBRARY OR SQLITE3_LIBRARIES))
+        set(SQLITE3_FOUND TRUE)
+        # Use SQLITE3_LIBRARIES from pkg-config if available, otherwise use our found library
+        if(NOT SQLITE3_LIBRARIES)
+            set(SQLITE3_LIBRARIES ${SQLITE3_LIBRARY})
+        endif()
+        
+        message(STATUS "Found SQLite3: ${SQLITE3_LIBRARIES}")
+        
+        # Create imported target if it doesn't exist yet
         if(NOT TARGET SQLite3::SQLite3)
             add_library(SQLite3::SQLite3 UNKNOWN IMPORTED)
             set_target_properties(SQLite3::SQLite3 PROPERTIES
-                IMPORTED_LOCATION "${SQLITE3_LIBRARY}"
+                IMPORTED_LOCATION "${SQLITE3_LIBRARIES}"
                 INTERFACE_INCLUDE_DIRECTORIES "${SQLITE3_INCLUDE_DIR}")
         endif()
     else()
-        message(FATAL_ERROR "Could not find SQLite3 library")
+        message(FATAL_ERROR "Could not find SQLite3 library. Please install libsqlite3-dev.")
     endif()
 endif()
 

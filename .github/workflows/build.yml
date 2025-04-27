@@ -68,7 +68,13 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc g++ cmake build-essential libssl-dev libsqlite3-dev libfmt-dev libcurl4-openssl-dev
+        sudo apt-get install -y gcc g++ cmake build-essential pkg-config
+        sudo apt-get install -y libssl-dev libsqlite3-dev libfmt-dev libcurl4-openssl-dev
+        
+        # Verify SQLite3 installation
+        pkg-config --cflags --libs sqlite3 || echo "SQLite3 not found in pkg-config"
+        find /usr -name "sqlite3.h" || echo "sqlite3.h not found"
+        find /usr -name "libsqlite3.so" || echo "libsqlite3.so not found"
       
     - name: Create Build Directory
       run: mkdir -p build

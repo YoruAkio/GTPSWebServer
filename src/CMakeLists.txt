@@ -35,9 +35,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     CPPHTTPLIB_OPENSSL_SUPPORT
 )
 
-# Handle CURL linking differently on Windows vs Linux
+# Custom handling for SQLite3 on different platforms
 if(WIN32 AND TARGET CONAN_PKG::libcurl)
-    # Use Conan target if available (Windows)
+    # Use Conan targets if available (Windows)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         OpenSSL::SSL
         OpenSSL::Crypto
@@ -45,8 +45,20 @@ if(WIN32 AND TARGET CONAN_PKG::libcurl)
         fmt
         CONAN_PKG::libcurl
     )
+elseif(UNIX)
+    # Ubuntu/Linux direct linking approach
+    find_library(SQLITE3_LIB sqlite3 REQUIRED)
+    find_library(FMT_LIB fmt REQUIRED)
+    
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        ${SQLITE3_LIB}
+        ${FMT_LIB}
+        ${CURL_LIBRARIES}
+    )
 else()
-    # Standard system libraries (Linux or fallback)
+    # Standard system libraries (fallback)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         OpenSSL::SSL
         OpenSSL::Crypto
