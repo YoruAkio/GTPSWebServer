@@ -19,6 +19,12 @@ add_executable(${PROJECT_NAME}
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
     add_definitions(/EHsc)
+    
+    # Silence MSVC STL deprecation warnings for checked_array_iterator
+    target_compile_definitions(${PROJECT_NAME} PRIVATE 
+        _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING
+        _SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS
+    )
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
     add_definitions(-fexceptions)
