@@ -194,9 +194,16 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         mkdir -p releases
-        cd bin
-        # Use PowerShell's Compress-Archive instead of zip
-        powershell -command "Compress-Archive -Path GTPSWebServer.exe,ssl,config.json -DestinationPath ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip -Force"
+        
+        # Copy necessary files to a staging directory
+        mkdir -p staging
+        cp build/bin/GTPSWebServer.exe staging/
+        cp -r bin/ssl staging/
+        cp bin/config.json staging/
+        
+        # Create zip from staging directory
+        cd staging
+        powershell -command "Compress-Archive -Path *.exe,ssl,config.json -DestinationPath ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip -Force"
       shell: bash
     
     - name: Upload Linux Zip Artifact
