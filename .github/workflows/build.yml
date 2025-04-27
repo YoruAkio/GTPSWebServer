@@ -40,10 +40,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install conan==1.59.0
     
-    - name: Setup Conan
+    - name: Setup Conan for Linux
+      if: matrix.os == 'ubuntu-latest'
       run: |
         conan profile new default --detect
-        conan profile update settings.compiler.libcxx=libstdc++11 default || true
+        conan profile update settings.compiler.libcxx=libstdc++11 default
+      shell: bash
+    
+    - name: Setup Conan for Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        conan profile new default --detect
       shell: bash
     
     - name: Install Linux Dependencies
@@ -54,6 +61,7 @@ jobs:
       
     - name: Create Build Directory
       run: mkdir -p build
+      shell: bash
       
     - name: Install Windows Dependencies
       if: matrix.os == 'windows-latest'
