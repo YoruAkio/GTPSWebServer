@@ -7,7 +7,7 @@
 #include "limiter/limiter.h"
 #include "nlohmann/json.hpp"
 #include "utils/logger.h"
-#include "geo/geo.h"  // Include the geo header file
+#include "geo/geo.h"
 
 using json = nlohmann::json;
 using namespace Ventura;
@@ -28,6 +28,10 @@ int main() {
     } else {
         Logger::info("WebServer config loaded");
         Config::printConfig();
+        
+        // Start config file monitoring
+        Logger::info("Starting config file monitor...");
+        Config::startConfigMonitor();
     }
 
     Logger::info("Initializing Geolocation service...");
@@ -36,13 +40,6 @@ int main() {
         Logger::warn("Geolocation service initialization had issues but will continue");
     } else {
         Logger::info("Geolocation service initialized successfully");
-        
-        // Test IP geolocation with some example IPs
-        std::vector<std::string> test_ips = {"8.8.8.8", "103.10.10.10", "111.22.33.44"};
-        for (const auto& ip : test_ips) {
-            bool allowed = geo_service.isAllowed(ip);
-            Logger::debug("Test IP {} is{} allowed", ip, allowed ? "" : " not");
-        }
     }
 
     Logger::info("Initializing Database...");
@@ -57,15 +54,11 @@ int main() {
         return 1;
     }
 
-    int time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    int cooldown_end = time_now + 300;
-    Logger::info("time_now: {}, cooldown_end: {}", time_now, cooldown_end);
-    m_db.insert_rate_limiter("1.2.1.2", time_now, cooldown_end);
-    m_db.print_all_table_value(Database::eTable::RATE_LIMITER);
-
     Logger::info("Initializing HTTPServer...");
     HTTPServer& m_servers{HTTPServer::Get()};
     if (!m_servers.listen(Config::ip)) {
+        // Stop the config monitor before exiting
+        Config::stopConfigMonitor();
         Logger::error("Failed to initialize HTTPServer");
         std::this_thread::sleep_for(std::chrono::seconds(5));
         return 1;
