@@ -1,6 +1,6 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
+#include "../src/utils/logger.h"
 
 #include <fstream>
 #include <string>
@@ -33,7 +33,7 @@ inline bool makeConfig() {
         file << j.dump(4);
         file.close();
     } catch (const std::exception& e) {
-        spdlog::error("Failed to create config.json: {}", e.what());
+        Logger::error("Failed to create config.json: {}", e.what());
         return false;
     }
 
@@ -45,7 +45,7 @@ inline bool loadConfig() {
     // if file is not found, create it
     if (!file.is_open()) {
         if (!makeConfig()) {
-            spdlog::error("Failed to create config.json");
+            Logger::error("Failed to create config.json");
             return false;
         }
         file.open("config.json");
@@ -62,7 +62,7 @@ inline bool loadConfig() {
         rateLimitTime = j["rateLimitTime"].get<int>();
         trustedRegion = j["trustedRegion"].get<std::vector<std::string>>();
     } catch (const std::exception& e) {
-        spdlog::error("Failed to parse config: {}", e.what());
+        Logger::error("Failed to parse config: {}", e.what());
         return false;
     }
 
@@ -81,13 +81,13 @@ inline json toJson() {
 }
 
 inline void printConfig() {
-    spdlog::info("Config:");
-    spdlog::info("  ip: {}", ip);
-    spdlog::info("  port: {}", port);
-    spdlog::info("  loginurl: {}", loginurl);
-    spdlog::info("  rateLimit: {}", rateLimit);
-    spdlog::info("  rateLimitTime: {}", rateLimitTime);
-    spdlog::info("  trustedRegion: {}", fmt::join(trustedRegion, ", "));
+    Logger::info("Config:");
+    Logger::info("  ip: {}", ip);
+    Logger::info("  port: {}", port);
+    Logger::info("  loginurl: {}", loginurl);
+    Logger::info("  rateLimit: {}", rateLimit);
+    Logger::info("  rateLimitTime: {}", rateLimitTime);
+    Logger::info("  trustedRegion: {}", fmt::join(trustedRegion, ", "));
 }
 }  // namespace Config
 }  // namespace Ventura

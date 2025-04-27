@@ -7,15 +7,15 @@
 #include <thread>
 
 #include "../limiter/limiter.h"
-#include "config.h"
+#include "../config.h"
 #include "httplib.h"
-#include "spdlog/spdlog.h"
+#include "../utils/logger.h"
 
 namespace Ventura {
 bool HTTPServer::listen(const std::string &ip) {
     m_servers = std::make_unique<httplib::SSLServer>("ssl/server.crt", "ssl/server.key");
 
-    spdlog::info("HTTPServer Initialized, listening to all requests...");
+    Logger::info("HTTPServer Initialized, listening to all requests...");
 
     m_servers->bind_to_port("0.0.0.0", 443);
     m_thread = std::make_unique<std::thread>(&HTTPServer::thread, this);
@@ -60,7 +60,7 @@ void HTTPServer::thread() {
     m_servers->Get(".*", [](const httplib::Request &req, httplib::Response &res) { res.status = 404; });
     m_servers->Post(".*", [](const httplib::Request &req, httplib::Response &res) { res.status = 404; });
 
-    m_servers->set_logger([](const httplib::Request &req, const httplib::Response &res) { spdlog::info("{} [{}]: {}", req.method, res.status, req.path); });
+    m_servers->set_logger([](const httplib::Request &req, const httplib::Response &res) { Logger::info("{} [{}]: {}", req.method, res.status, req.path); });
 
     m_servers->listen_after_bind();
     while (true);

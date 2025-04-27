@@ -8,7 +8,7 @@
 #include "../config.h"
 #include "../database/database.h"
 #include "httplib.h"
-#include "spdlog/spdlog.h"
+#include "../utils/logger.h"
 #include "sqlite3.h"
 
 Ventura::Database& m_db(Ventura::Database::Get());
@@ -21,9 +21,9 @@ void Limiter::ListenRequest(const httplib::Request& req, httplib::Response& res)
     if (m_request_count.find(ip) != m_request_count.end()) {
         if (m_request_count[ip].first < Config::rateLimit) {
             m_request_count[ip].first++;
-            spdlog::info("Incremented rate limiter for IP: {}, count: {}", ip, m_request_count[ip].first);
+            Logger::info("Incremented rate limiter for IP: {}, count: {}", ip, m_request_count[ip].first);
         } else {
-            spdlog::info("Added rate limiter for IP: {}, time_added: {}, cooldown_end: {}", ip, m_request_data[ip].first, m_request_data[ip].second);
+            Logger::info("Added rate limiter for IP: {}, time_added: {}, cooldown_end: {}", ip, m_request_data[ip].first, m_request_data[ip].second);
             m_request_count[ip].first = 1;
             m_request_data[ip] = std::make_pair(time_now, time_now + Config::rateLimit);
             m_db.insert_rate_limiter(ip, time_now, time_now + Config::rateLimit);
@@ -38,7 +38,7 @@ void Limiter::ListenRequest(const httplib::Request& req, httplib::Response& res)
         if (m_request_data[ip].first == 1 && m_request_data[ip].second == 1) return;
 
         if (m_request_data[ip].second > time_now) {
-            spdlog::info("IP: {} is rate limited", ip);
+            Logger::info("IP: {} is rate limited", ip);
             res.status = 429;
             res.set_content("Rate limited", "text/plain");
             return;
@@ -52,7 +52,7 @@ bool Limiter::LoadLimiterData() {
 
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return false;
     }
 
@@ -67,7 +67,7 @@ bool Limiter::LoadLimiterData() {
 
     sqlite3_finalize(stmt);
 
-    spdlog::info("Loaded Limiter Data");
+    Logger::info("Loaded Limiter Data");
 
     return true;
 }

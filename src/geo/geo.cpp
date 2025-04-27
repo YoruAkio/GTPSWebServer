@@ -1,17 +1,15 @@
 #include "geo.h"
-#include <spdlog/spdlog.h>
+#include "../utils/logger.h"
 
-/**
-** @brief Geo object destructor
-** Code is unmaintainable and not suitable for production
-*/
 namespace Ventura {
 Geo::~Geo() {
-    spdlog::info("Geo object destroyed");
+    Logger::info("Geo object destroyed");
 }
 
-bool Geo::isAllowed(const std::string& ip) {
-    spdlog::info("Checking if IP is allowed: {}", ip);
-    return true;
+bool Geo::isAllowed(const std::string& ip) const {
+    // Example: Only allow IPs starting with "192."
+    bool allowed = ip.rfind("192.", 0) == 0;
+    Logger::info("Checking if IP is allowed: {} -> {}", ip, allowed ? "yes" : "no");
+    return allowed;
 }
 }  // namespace Ventura

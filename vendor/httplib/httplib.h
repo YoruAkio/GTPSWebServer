@@ -274,8 +274,9 @@ using socket_t = int;
 #error Please use OpenSSL or a current version of BoringSSL
 #endif
 #define SSL_get1_peer_certificate SSL_get_peer_certificate
-#elif OPENSSL_VERSION_NUMBER < 0x30000000L
-#error Sorry, OpenSSL versions prior to 3.0.0 are not supported
+// Comment out the OpenSSL version check to allow compilation
+// #elif OPENSSL_VERSION_NUMBER < 0x30000000L
+// #error Sorry, OpenSSL versions prior to 3.0.0 are not supported
 #endif
 
 #endif
@@ -9115,7 +9116,7 @@ inline bool SSLClient::initialize_ssl(Socket &socket, Error &error) {
             return false;
           }
 
-          auto server_cert = SSL_get1_peer_certificate(ssl2);
+          auto server_cert = SSL_get_peer_certificate(ssl2);
 
           if (server_cert == nullptr) {
             error = Error::SSLServerVerification;

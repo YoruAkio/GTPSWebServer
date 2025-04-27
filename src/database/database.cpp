@@ -4,7 +4,7 @@
 #include <thread>
 
 #include "../limiter/limiter.h"
-#include "spdlog/spdlog.h"
+#include "../utils/logger.h"
 #include "sqlite3.h"
 
 namespace Ventura {
@@ -13,7 +13,7 @@ bool Database::open_db(const std::string& path) {
     int rc = sqlite3_open(path.c_str(), &db);
     m_db.reset(db);
     if (rc) {
-        spdlog::error("Can't open database: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Can't open database: {}", sqlite3_errmsg(m_db.get()));
         return false;
     }
 
@@ -23,7 +23,7 @@ bool Database::open_db(const std::string& path) {
         "CREATE TABLE IF NOT EXISTS rate_limiter (ip TEXT PRIMARY KEY NOT NULL, time_added INTEGER NOT NULL, cooldown_end INTEGER NOT NULL);";
     rc = sqlite3_exec(m_db.get(), sql, nullptr, 0, &zErrMsg);
     if (rc != SQLITE_OK) {
-        spdlog::error("SQL error: {}", zErrMsg);
+        Logger::error("SQL error: {}", zErrMsg);
         sqlite3_free(zErrMsg);
         return false;
     }
@@ -34,25 +34,25 @@ bool Database::open_db(const std::string& path) {
             sqlite3_stmt* stmt;
             int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
             if (rc != SQLITE_OK) {
-                spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+                Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
                 std::this_thread::sleep_for(std::chrono::seconds(10));
                 continue;
             }
             int time_now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            spdlog::info("Checking rate limiter table...");
-            spdlog::info("Time Now: {}", time_now);
+            Logger::info("Checking rate limiter table...");
+            Logger::info("Time Now: {}", time_now);
 
             while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
                 std::string ip = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
                 int time_added = sqlite3_column_int(stmt, 1);
                 int cooldown_end = sqlite3_column_int(stmt, 2);
 
-                spdlog::info("IP: {}, Time Added: {}, Cooldown End: {}", ip, time_added, cooldown_end);
+                Logger::info("IP: {}, Time Added: {}, Cooldown End: {}", ip, time_added, cooldown_end);
 
                 if (time_now > cooldown_end) {
                     this->remove_rate_limiter(ip);
 
-                    spdlog::info("Removed rate limiter for IP: {}", ip);
+                    Logger::info("Removed rate limiter for IP: {}", ip);
                 }
             }
 
@@ -78,13 +78,13 @@ int Database::total_table_row(const eTable& table) {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_ROW) {
-        spdlog::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
@@ -105,7 +105,7 @@ void Database::print_all_table_value(const eTable& table) {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return;
     }
 
@@ -122,19 +122,19 @@ std::vector<std::string> Database::find_rate_limited(const std::string& ip) {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return {};
     }
 
     rc = sqlite3_bind_text(stmt, 1, ip.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
         return {};
     }
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_ROW) {
-        spdlog::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
         return {};
     }
 
@@ -151,43 +151,43 @@ bool Database::insert_rate_limiter(const std::string& ip, const int& time_added,
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_text(stmt, 1, ip.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_int(stmt, 2, time_added);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_int(stmt, 3, cooldown_end);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_int(stmt, 4, time_added);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_int(stmt, 5, cooldown_end);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind int: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
-        spdlog::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
@@ -200,19 +200,19 @@ bool Database::remove_rate_limiter(const std::string& ip) {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_text(stmt, 1, ip.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
-        spdlog::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
@@ -225,19 +225,19 @@ bool Database::insert_blacklist(const std::string& ip) {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_text(stmt, 1, ip.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
-        spdlog::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
@@ -250,19 +250,19 @@ bool Database::remove_blacklist(const std::string& ip) {
     sqlite3_stmt* stmt;
     int rc = sqlite3_prepare_v2(m_db.get(), sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to prepare statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_bind_text(stmt, 1, ip.c_str(), -1, SQLITE_STATIC);
     if (rc != SQLITE_OK) {
-        spdlog::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to bind text: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {
-        spdlog::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
+        Logger::error("Failed to step statement: {}", sqlite3_errmsg(m_db.get()));
         return -1;
     }
 
