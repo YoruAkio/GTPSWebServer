@@ -195,7 +195,8 @@ jobs:
       run: |
         mkdir -p releases
         cd bin
-        zip -r ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip GTPSWebServer.exe ssl config.json
+        # Use PowerShell's Compress-Archive instead of zip
+        powershell -command "Compress-Archive -Path GTPSWebServer.exe,ssl,config.json -DestinationPath ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip -Force"
       shell: bash
     
     - name: Upload Linux Zip Artifact
