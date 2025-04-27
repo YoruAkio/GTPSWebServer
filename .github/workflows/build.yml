@@ -43,15 +43,22 @@ jobs:
     - name: Setup Conan for Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
-        conan profile new default --detect
+        # Create default profile if it doesn't exist
+        if ! conan profile list | grep -q default; then
+          conan profile new default --detect
+        fi
+        # Update the libcxx setting
         conan profile update settings.compiler.libcxx=libstdc++11 default
       shell: bash
     
     - name: Setup Conan for Windows
       if: matrix.os == 'windows-latest'
       run: |
-        conan profile new default --detect
-      shell: bash
+        # Create default profile if it doesn't exist
+        if not conan profile list | findstr /C:"default" >nul 2>&1; then
+          conan profile new default --detect
+        fi
+      shell: cmd
     
     - name: Install Linux Dependencies
       if: matrix.os == 'ubuntu-latest'
