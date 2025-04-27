@@ -197,13 +197,31 @@ jobs:
         
         # Copy necessary files to a staging directory
         mkdir -p staging
+        
+        # Copy the main executable
         cp build/bin/GTPSWebServer.exe staging/
+        
+        # Copy SSL and config files
         cp -r bin/ssl staging/
         cp bin/config.json staging/
         
+        # Copy all DLL files from build directory
+        find build/bin -name "*.dll" -exec cp {} staging/ \;
+        
+        # Copy specific DLLs if not automatically found
+        # May need to adjust paths based on your build setup
+        cp build/bin/Debug/*.dll staging/ 2>/dev/null || echo "No DLLs in Debug folder"
+        
+        # Copy Conan-installed DLLs
+        cp build/bin/*.dll staging/ 2>/dev/null || echo "No DLLs in bin folder"
+        
+        # List all files in the staging directory to verify
+        echo "Files in staging directory:"
+        ls -la staging/
+        
         # Create zip from staging directory
         cd staging
-        powershell -command "Compress-Archive -Path *.exe,ssl,config.json -DestinationPath ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip -Force"
+        powershell -command "Compress-Archive -Path * -DestinationPath ../releases/Releases-Windows-${{ steps.sha.outputs.short_sha }}.zip -Force"
       shell: bash
     
     - name: Upload Linux Zip Artifact
